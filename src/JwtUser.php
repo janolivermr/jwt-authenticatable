@@ -66,4 +66,9 @@ class JwtUser implements Authenticatable
     {
         return $this->claims->get($name);
     }
+
+    public function __isset(string $name): bool
+    {
+        return $this->claims->has($name);
+    }
 }
