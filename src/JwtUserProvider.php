@@ -18,6 +18,8 @@ use RuntimeException;
 
 class JwtUserProvider implements UserProvider
 {
+    protected bool $shouldValidate = true;
+
     public function __construct(
         protected Parser $parser,
         protected Validator $validator,
@@ -66,11 +68,13 @@ class JwtUserProvider implements UserProvider
             throw new InvalidArgumentException('Token must be an unencrypted token.');
         }
 
-        $this->validator->assert(
-            $jwt,
-            new Constraint\SignedWith($this->signatureManager->getSigner($jwt), $this->signatureManager->findPublicKey($jwt)),
-            new Constraint\StrictValidAt($this->getClock())
-        );
+        if ($this->shouldValidate) {
+            $this->validator->assert(
+                $jwt,
+                new Constraint\SignedWith($this->signatureManager->getSigner($jwt), $this->signatureManager->findPublicKey($jwt)),
+                new Constraint\StrictValidAt($this->getClock())
+            );
+        }
 
         return new JwtUser($jwt->claims());
     }
@@ -81,6 +85,11 @@ class JwtUserProvider implements UserProvider
     public function validateCredentials(Authenticatable $user, array $credentials)
     {
         throw new JwtLimitationException('Validating credentials is not supported.');
+    }
+
+    public function disableValidation()
+    {
+        $this->shouldValidate = false;
     }
 
     protected function getClock(): Clock
