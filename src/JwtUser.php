@@ -5,12 +5,12 @@ declare(strict_types=1);
 namespace Janolivermr\JwtAuthenticatable;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use Illuminate\Support\Arr;
 use Janolivermr\JwtAuthenticatable\Exceptions\JwtLimitationException;
-use Lcobucci\JWT\Token\DataSet;
 
 class JwtUser implements Authenticatable
 {
-    public function __construct(protected DataSet $claims)
+    public function __construct(protected array $claims)
     {
     }
 
@@ -64,11 +64,11 @@ class JwtUser implements Authenticatable
 
     public function __get(string $name)
     {
-        return $this->claims->get($name);
+        return Arr::get($this->claims, $name);
     }
 
     public function __isset(string $name): bool
     {
-        return $this->claims->has($name);
+        return Arr::has($this->claims, $name);
     }
 }

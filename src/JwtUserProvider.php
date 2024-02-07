@@ -4,27 +4,16 @@ declare(strict_types=1);
 
 namespace Janolivermr\JwtAuthenticatable;
 
-use DateTimeImmutable;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\Auth\UserProvider;
 use InvalidArgumentException;
 use Janolivermr\JwtAuthenticatable\Exceptions\JwtLimitationException;
-use Lcobucci\JWT\Parser;
-use Lcobucci\JWT\UnencryptedToken;
-use Lcobucci\JWT\Validation\Constraint;
-use Lcobucci\JWT\Validator;
-use Psr\Clock\ClockInterface as Clock;
 use RuntimeException;
 
 class JwtUserProvider implements UserProvider
 {
-    protected bool $shouldValidate = true;
-
-    public function __construct(
-        protected Parser $parser,
-        protected Validator $validator,
-        protected SignatureManager $signatureManager
-    ) {
+    public function __construct(protected TokenHandler $tokenHandler)
+    {
     }
 
     /**
@@ -63,20 +52,8 @@ class JwtUserProvider implements UserProvider
         if (!is_string($token) || empty($token)) {
             throw new InvalidArgumentException('Token must be a string.');
         }
-        $jwt = $this->parser->parse($token);
-        if (!($jwt instanceof UnencryptedToken)) {
-            throw new InvalidArgumentException('Token must be an unencrypted token.');
-        }
 
-        if ($this->shouldValidate) {
-            $this->validator->assert(
-                $jwt,
-                new Constraint\SignedWith($this->signatureManager->getSigner($jwt), $this->signatureManager->findPublicKey($jwt)),
-                new Constraint\StrictValidAt($this->getClock())
-            );
-        }
-
-        return new JwtUser($jwt->claims());
+        return new JwtUser($this->tokenHandler->getClaims($token));
     }
 
     /**
@@ -85,20 +62,5 @@ class JwtUserProvider implements UserProvider
     public function validateCredentials(Authenticatable $user, array $credentials)
     {
         throw new JwtLimitationException('Validating credentials is not supported.');
-    }
-
-    public function disableValidation()
-    {
-        $this->shouldValidate = false;
-    }
-
-    protected function getClock(): Clock
-    {
-        return new class implements Clock {
-            public function now(): DateTimeImmutable
-            {
-                return new DateTimeImmutable();
-            }
-        };
     }
 }
